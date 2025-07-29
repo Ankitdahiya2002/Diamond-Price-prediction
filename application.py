@@ -1,42 +1,43 @@
-from flask import Flask,request,render_template,jsonify
-from src.pipelines.prediction_pipeline import CustomData,PredictPipeline
+import streamlit as st
+from src.pipelines.prediction_pipeline import CustomData, PredictPipeline
 
+st.set_page_config(page_title="Diamond Price Prediction", layout="centered")
 
-application=Flask(__name__)
+st.title("💎 Diamond Price Predictor")
 
-app=application
+st.markdown("Fill in the features below to get the predicted price of the diamond.")
 
-@app.route('/')
-def home_page():
-    return render_template('index.html')
+with st.form("prediction_form"):
+    carat = st.number_input("Carat", min_value=0.0, step=0.01)
+    depth = st.number_input("Depth", min_value=0.0, step=0.1)
+    table = st.number_input("Table", min_value=0.0, step=0.1)
+    x = st.number_input("X (length in mm)", min_value=0.0, step=0.01)
+    y = st.number_input("Y (width in mm)", min_value=0.0, step=0.01)
+    z = st.number_input("Z (depth in mm)", min_value=0.0, step=0.01)
 
-@app.route('/predict',methods=['GET','POST'])
+    cut = st.selectbox("Cut", ['Fair', 'Good', 'Very Good', 'Premium', 'Ideal'])
+    color = st.selectbox("Color", ['D', 'E', 'F', 'G', 'H', 'I', 'J'])
+    clarity = st.selectbox("Clarity", ['I1', 'SI2', 'SI1', 'VS2', 'VS1', 'VVS2', 'VVS1', 'IF'])
 
-def predict_datapoint():
-    if request.method=='GET':
-        return render_template('form.html')
-    
-    else:
-        data=CustomData(
-            carat=float(request.form.get('carat')),
-            depth = float(request.form.get('depth')),
-            table = float(request.form.get('table')),
-            x = float(request.form.get('x')),
-            y = float(request.form.get('y')),
-            z = float(request.form.get('z')),
-            cut = request.form.get('cut'),
-            color= request.form.get('color'),
-            clarity = request.form.get('clarity')
+    submit = st.form_submit_button("Predict")
+
+if submit:
+    try:
+        data = CustomData(
+            carat=carat,
+            depth=depth,
+            table=table,
+            x=x,
+            y=y,
+            z=z,
+            cut=cut,
+            color=color,
+            clarity=clarity
         )
-        final_new_data=data.get_data_as_dataframe()
-        predict_pipeline=PredictPipeline()
-        pred=predict_pipeline.predict(final_new_data)
+        final_new_data = data.get_data_as_dataframe()
+        predict_pipeline = PredictPipeline()
+        pred = predict_pipeline.predict(final_new_data)
 
-        results=round(pred[0],2)
-
-        return render_template('form.html',final_result=results)
-    
-
-if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
-
+        st.success(f"💰 Predicted Diamond Price: ${round(pred[0], 2)}")
+    except Exception as e:
+        st.error(f"Error: {str(e)}")
